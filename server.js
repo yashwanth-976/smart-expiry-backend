@@ -18,11 +18,13 @@ app.post("/recipes", async (req, res) => {
   if (!ingredients || ingredients.length === 0) {
     return res.status(400).json({ error: "No ingredients provided" });
   }
-
   const prompt = `
-You are a helpful cooking assistant.
-Suggest 3 simple home-style recipes using the following ingredients:
-${ingredients.join(", ")}
+Suggest 3 simple recipes using: ${ingredients.join(", ")}.
+For each recipe:
+- Give recipe name
+- Give 3–5 cooking steps
+- Keep it simple for students
+`;
 
 Rules:
 - Simple Indian home cooking
@@ -57,4 +59,5 @@ const PORT = 3000;
 app.listen(PORT, () =>
   console.log(`✅ Smart Expiry backend running on http://localhost:${PORT}`)
 );
+
 
