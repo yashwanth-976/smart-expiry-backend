@@ -4,6 +4,9 @@ import cors from "cors";
 import dotenv from "dotenv";
 
 dotenv.config();
+app.get("/", (req, res) => {
+  res.send("Smart Expiry Backend is running ✅");
+});
 
 const app = express();
 app.use(cors());
@@ -54,3 +57,4 @@ const PORT = 3000;
 app.listen(PORT, () =>
   console.log(`✅ Smart Expiry backend running on http://localhost:${PORT}`)
 );
+
