@@ -1,76 +1,89 @@
 import express from "express";
-import fetch from "node-fetch";
 import cors from "cors";
-import dotenv from "dotenv";
-
-dotenv.config();
+import Groq from "groq-sdk";
 
 const app = express();
+
 app.use(cors());
 app.use(express.json());
 
-/* =========================
-   HEALTH CHECK
-========================= */
-app.get("/", (req, res) => {
-  res.send("Smart Expiry Backend is running ✅");
+const groq = new Groq({
+  apiKey: process.env.GROQ_API_KEY
 });
 
-/* =========================
-   RECIPE API
-========================= */
+app.get("/", (req, res) => {
+  res.send("Smart Expiry Backend Running");
+});
+
 app.post("/recipes", async (req, res) => {
-  const { ingredients } = req.body;
+  try {
+    const { ingredients } = req.body;
 
-  if (!ingredients || ingredients.length === 0) {
-    return res.status(400).json({ error: "No ingredients provided" });
-  }
+    if (!Array.isArray(ingredients) || ingredients.length < 2) {
+      return res.json({ recipes: [] });
+    }
 
-  const prompt = `
-Suggest 3 simple recipes using: ${ingredients.join(", ")}.
+    const completion = await groq.chat.completions.create({
+      model: "llama3-70b-8192",
+      temperature: 0.2,
+      messages: [
+        {
+          role: "system",
+          content: `
+Return ONLY valid JSON.
+No text.
+No explanation.
 
-For each recipe:
-- Give recipe name
-- Give 3–5 cooking steps
-- Keep it simple for students
+Format:
+{
+  "recipes": [
+    {
+      "name": "string",
+      "ingredients": ["string"],
+      "steps": ["string"]
+    }
+  ]
+}
 
 Rules:
-- Simple Indian home cooking
-- No rare ingredients
-- Short steps
-`;
-
-  try {
-    const response = await fetch(
-      "https://api.groq.com/openai/v1/chat/completions",
-      {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${process.env.GROQ_API_KEY}`,
-          "Content-Type": "application/json",
+- Use only given ingredients
+- Create 2 recipes
+- Each recipe must have at least 3 steps
+`
         },
-        body: JSON.stringify({
-          model: "llama3-8b-8192",
-          messages: [{ role: "user", content: prompt }],
-        }),
-      }
-    );
-
-    const data = await response.json();
-
-    res.json({
-      recipes: data.choices[0].message.content,
+        {
+          role: "user",
+          content: ingredients.join(", ")
+        }
+      ]
     });
+
+    let raw = completion.choices[0].message.content;
+
+    // remove accidental code blocks
+    raw = raw.replace(/```json|```/g, "").trim();
+
+    let parsed;
+    try {
+      parsed = JSON.parse(raw);
+    } catch (e) {
+      console.error("JSON parse failed:", raw);
+      return res.json({ recipes: [] });
+    }
+
+    if (!parsed.recipes || !Array.isArray(parsed.recipes)) {
+      return res.json({ recipes: [] });
+    }
+
+    res.json({ recipes: parsed.recipes });
+
   } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: "Groq API error" });
+    console.error("Groq error:", err);
+    res.json({ recipes: [] });
   }
 });
 
-/* =========================
-   START SERVER
-========================= */
-const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => {
-  console.log(`✅ Smart Expiry backend running on port ${PORT}`);
-});
+const PORT = process.env.PORT || 5000;
+app.listen(PORT, () =>
+  console.log(`Backend running on port ${PORT}`)
+);
