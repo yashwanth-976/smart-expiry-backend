@@ -10,7 +10,7 @@ app.use(cors());
 app.use(express.json());
 
 /* =========================
-   TEST ROUTE (IMPORTANT)
+   HEALTH CHECK
 ========================= */
 app.get("/", (req, res) => {
   res.send("Smart Expiry Backend is running ✅");
@@ -46,7 +46,7 @@ Rules:
       {
         method: "POST",
         headers: {
-          Authorization: \`Bearer ${process.env.GROQ_API_KEY}\`,
+          Authorization: `Bearer ${process.env.GROQ_API_KEY}`,
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
